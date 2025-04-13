@@ -1,21 +1,24 @@
 # Use a Python image with uv pre-installed
 FROM python:3.10.6-slim
 
-
-# Установка зависимостей для MS SQL
+# Установка зависимостей для MS SQL и ODBC
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gnupg \
     curl \
     unixodbc \
     unixodbc-dev \
+    odbcinst \
+    libodbc1 \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 mssql-tools18 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Добавляем mssql-tools в PATH
+ENV PATH="/opt/mssql-tools18/bin:${PATH}"
 
 # The installer requires curl (and certificates) to download the release archive
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates

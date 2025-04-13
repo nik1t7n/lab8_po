@@ -1,3 +1,5 @@
+from dotenv import load_dotenv 
+import os
 import asyncio
 import logging
 
@@ -66,23 +68,26 @@ async def create_tables_with_sqlalchemy(engine: AsyncEngine) -> None:
 async def init_db() -> None:
     """Инициализирует базу данных, создавая все таблицы по схеме"""
     # Используем чистый SQL URL для начальной проверки (без указания базы данных)
-    db_host = database_url.split("@")[1].split("/")[0]
-    db_credentials = database_url.split("@")[0].split("://")[1]
-    db_name = database_url.split("/")[-1]
+    load_dotenv()
+
+    DB_HOST = os.getenv("DB_HOST", "db")
+    DB_USER = os.getenv("DB_USER", "sa")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "SQLConnect1$")
+    DB_NAME = os.getenv("DB_NAME", "flowers_db_2025")
+    DB_PORT = os.getenv("DB_PORT", "1433")
 
     # Создаем URL без указания базы данных для первоначального подключения
-    master_url = f"mssql+aioodbc://{db_credentials}@{db_host}/?odbc_connect=DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={db_host.split(':')[0]};DATABASE=master;UID={db_credentials.split(':')[0]};PWD={db_credentials.split(':')[1]};TrustServerCertificate=yes"
-
+    master_url = f"mssql+aioodbc:///?odbc_connect=DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={DB_HOST};DATABASE={DB_NAME};UID={DB_USER};PWD={DB_PASSWORD};TrustServerCertificate=yes;Encrypt=no"
     master_engine = create_async_engine(master_url, echo=True)
 
     try:
         # Проверяем существование базы данных
-        exists = await check_database_exists(master_engine, db_name)
+        exists = await check_database_exists(master_engine, DB_NAME)
 
         if not exists:
             # Создаем базу данных
-            await create_database(master_engine, db_name)
-            logger.info(f"База данных {db_name} успешно создана")
+            await create_database(master_engine, DB_NAME)
+            logger.info(f"База данных { DB_NAME} успешно создана")
 
             # Получаем полный SQL-скрипт для создания таблиц (точное соответствие DDL)
             sql_script = """
@@ -322,7 +327,7 @@ go
             await execute_sql_script(db_engine, sql_script)
             logger.info("Таблицы успешно созданы с помощью DDL-скрипта")
         else:
-            logger.info(f"База данных {db_name} уже существует")
+            logger.info(f"База данных { DB_NAME} уже существует")
 
     except Exception as e:
         logger.error(f"Ошибка при инициализации базы данных: {e}")

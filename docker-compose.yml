@@ -1,24 +1,27 @@
 version: '3.8'
 services:
   db:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/azure-sql-edge
     platform: linux/arm64
-    container_name: mssql-server
+    container_name: sql_connect
     ports:
       - "1433:1433"
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=12345678bIba$
+      - ACCEPT_EULA=1
+      - MSSQL_USER=sa
+      - MSSQL_SA_PASSWORD=SQLConnect1$
       - MSSQL_PID=Developer
     volumes:
       - mssql-data:/var/opt/mssql
     networks:
       - app-network
     healthcheck:
-      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "12345678bIba$$" -Q "SELECT 1" || exit 1
+      # Пытаемся выполнить простой запрос к master базе
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "SQLConnect1$", "-Q", "SELECT 1", "-b", "-o", "/dev/null"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10 # Увеличить количество попыток, т.к. SQL Server может стартовать долго
+      start_period: 30s # Дать время на первоначальный запуск перед началом проверок
   
   backend:
     build: 
@@ -34,7 +37,7 @@ services:
     environment:
       - DB_HOST=db
       - DB_USER=sa
-      - DB_PASSWORD=12345678bIba$
+      - DB_PASSWORD=SQLConnect1$
       - DB_NAME=flowers_db_2025
       - DB_PORT=1433
     networks:
